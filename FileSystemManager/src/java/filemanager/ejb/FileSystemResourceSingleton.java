@@ -11,6 +11,8 @@ import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.persistence.PreUpdate;
 
 /**
  *
@@ -23,6 +25,11 @@ public class FileSystemResourceSingleton {
         
     private final String DBNAME = "filesystemdb";
     public MongoClient mongoDBaccess;
+    
+    @PreDestroy
+    private void preDestroyMessage(){
+        System.out.println("Destroying Resource Singleton");
+    }
     
     @PostConstruct
     private void initMongoDBPool(){
@@ -52,10 +59,4 @@ public class FileSystemResourceSingleton {
     public DB getDBInstance(){
         return mongoDBaccess.getDB(DBNAME);
     }
-    
-    
-    
-    
-    
-    
 }

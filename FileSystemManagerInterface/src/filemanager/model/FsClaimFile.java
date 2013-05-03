@@ -18,7 +18,7 @@ public class FsClaimFile implements Serializable {
     private String file_name;
     private String content_type;
     private String mongo_id;
-    private float file_length;
+    private long file_length;
     private Date upload_date;
     private String file_md5;
 
@@ -72,7 +72,7 @@ public class FsClaimFile implements Serializable {
         return file_length;
     }
 
-    public void setFile_length(float file_length) {
+    public void setFile_length(long file_length) {
         this.file_length = file_length;
     }
 

@@ -13,12 +13,14 @@ import filemanager.model.MetaDataStatistic;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import javax.ejb.embeddable.EJBContainer;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import java.util.Hashtable;
 
 
 /**
@@ -57,11 +59,11 @@ public class FileSystemManagerBeanTest {
         EJBContainer container = javax.ejb.embeddable.EJBContainer.createEJBContainer();
         FileSystemManager instance = (FileSystemManager)container.getContext()
                                         .lookup("java:global/classes/FileSystemManagerBean");
-        
+
 //        boolean expResult = true;
 //        System.out.println("Creating FSMetadata....");
 //        boolean result = instance.createUserFSMetaData(_userId, _quota);
-       
+//       
 //        _quota = 100.5F;
 //        System.out.println("Update Quota....");
 //        instance.setUserFSMetadataQuota(_userId, _quota);
@@ -97,7 +99,7 @@ public class FileSystemManagerBeanTest {
 //          System.out.println("Renaming Carpeta in");
 //          instance.claimFSrenameDirectory(0,"NombreNuevo");
 //          System.out.println("Json Display: "+instance.claimFSgetActualDirContents());
-     
+//     
 //          ar = Collections.list(instance.getClaimFSTree().preorderEnumeration());
 //          System.out.println("Tree Preorder");
 //          System.out.println(Arrays.toString(ar.toArray()));
@@ -121,15 +123,16 @@ public class FileSystemManagerBeanTest {
           System.out.println(Arrays.toString(ar.toArray()));
           System.out.println("Actual Dir Contents: "+instance.claimFSgetActualDirContents());
           
-          FsClaimFile fsc = new FsClaimFile("Imagen");
-          fsc.setFile_path("C:/Users/respana/Desktop/Chrysanthemum.jpg");
+          FsClaimFile fsc = new FsClaimFile("Word");
+          fsc.setFile_path("C:/Users/respana/Desktop/20130125_MP_FormatoQA_T4_CompraComercio_V1.0.docx");
+          
+          FsClaimFile fsc2 = new FsClaimFile("Imagen");
+          fsc2.setFile_path("C:/Users/respana/Desktop/Chrysanthemum.jpg");
+          
           System.out.println("Create file for claim");
-          instance.UploadFileforClaim(fsc);
+          instance.UploadFileforClaim(fsc,fsc2);
           System.out.println("Actual Dir Contents: "+instance.claimFSgetActualDirContents());
-          System.out.println("Sleeping 10 seconds");
-          Thread.sleep(10000);
-          System.out.println("woke up again");
-          System.out.println("Actual Dir Contents: "+instance.claimFSgetActualDirContents());
-     
+        
+          
     }
 }

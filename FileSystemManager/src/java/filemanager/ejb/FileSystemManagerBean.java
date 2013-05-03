@@ -2,6 +2,8 @@ package filemanager.ejb;
 
 import com.mongodb.*;
 import com.mongodb.gridfs.GridFS;
+import com.mongodb.gridfs.GridFSInputFile;
+import com.sun.xml.ws.security.opt.impl.message.GSHeaderElement;
 import ejb.FileSystemManager;
 import filemanager.model.ClaimFS;
 import filemanager.model.FsClaimDirectory;
@@ -13,6 +15,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
@@ -61,8 +66,8 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     @PreDestroy
     private void destroyState(){
         System.out.println("Im about to be destroyed");
+     //   saveClaimFStoDB();
     }
-    
     
     private void activateState(){
         System.out.println("Im about to be activated");
@@ -180,6 +185,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
        
         //TODO? update fsmetadata and FSCLAIM parameters
         System.out.println("Im saving!");
+        System.out.println("Claim ID: "+this.claimFS.getClaim_id());
         DBCollection fsclaim_coll = fs_resources.getDBInstance().
                                             getCollection("fs_claim_"+this.claimFS.getClaim_id());
         
@@ -196,24 +202,39 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
             e.printStackTrace();
         }
         System.out.println("Saved");
+        
+        // clear CLAIMFS reference?
     }
     
     public String UploadFileforClaim(FsClaimFile... file_objects) 
                                                         throws FileNotFoundException{
         GridFS myFS = new GridFS(fs_resources.getDBInstance());
+        GridFSInputFile gfsinput_file;
         File f_add;
         DBCollection fsclaim_coll = fs_resources.getDBInstance().
                                             getCollection("fs_claim_"+this.claimFS.getClaim_id());
+        String tmp_file_path; // tmp file path used to remove it
+        String mime_type;
         
         for(FsClaimFile fsc : file_objects){
-      
            f_add = new File(fsc.getFile_path());
            if(f_add.exists()){ 
-               try {
-                    myFS.createFile(f_add).save(); // save to gridFS
+               try {              
+                   tmp_file_path = fsc.getFile_path();
+                   mime_type = Files.probeContentType(Paths.get(tmp_file_path));
+                   gfsinput_file = myFS.createFile(f_add);
+                   gfsinput_file.setContentType(mime_type);
+                   gfsinput_file.save(); // save to gridFS
+                    
                     // updates tree with new node as leaf
-                    this.claimFS.getNode_in().add(new DefaultMutableTreeNode(fsc,false));
-                    // delete tmp file
+                   fsc.setFile_path(null); // in order to no get serialized
+                   fsc.setFile_length(f_add.length());
+                   fsc.setContent_type(mime_type);
+                   fsc.setUpload_date(gfsinput_file.getUploadDate());
+                   fsc.setFile_md5(gfsinput_file.getMD5());
+                   fsc.setMongo_id(gfsinput_file.getId().toString());
+                   this.claimFS.getNode_in().add(new DefaultMutableTreeNode(fsc,false));
+                   // delete tmp file
                 } catch (IOException ex) {
                     Logger.getLogger(FileSystemManagerBean.class.getName())
                                                   .log(Level.SEVERE, null, ex);
