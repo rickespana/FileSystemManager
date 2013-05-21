@@ -10,6 +10,7 @@ import ejb.FileSystemManager;
 import filemanager.model.ClaimFS;
 import filemanager.model.FsClaimFile;
 import filemanager.model.MetaDataStatistic;
+import java.io.BufferedInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -125,13 +126,16 @@ public class FileSystemManagerBeanTest {
           
           FsClaimFile fsc = new FsClaimFile("Word");
           fsc.setFile_path("C:/Users/respana/Desktop/20130125_MP_FormatoQA_T4_CompraComercio_V1.0.docx");
+          fsc.setFile_extension("doc");
           
           FsClaimFile fsc2 = new FsClaimFile("Imagen");
           fsc2.setFile_path("C:/Users/respana/Desktop/Chrysanthemum.jpg");
+          fsc2.setFile_extension("jpg");
           
           System.out.println("Create file for claim");
           instance.UploadFileforClaim(fsc,fsc2);
           System.out.println("Actual Dir Contents: "+instance.claimFSgetActualDirContents());
+          instance.saveClaimFStoDB();
         
           
     }

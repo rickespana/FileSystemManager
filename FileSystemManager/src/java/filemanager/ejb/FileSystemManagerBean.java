@@ -3,7 +3,7 @@ package filemanager.ejb;
 import com.mongodb.*;
 import com.mongodb.gridfs.GridFS;
 import com.mongodb.gridfs.GridFSInputFile;
-import com.sun.xml.ws.security.opt.impl.message.GSHeaderElement;
+import com.mongodb.MongoException;
 import ejb.FileSystemManager;
 import filemanager.model.ClaimFS;
 import filemanager.model.FsClaimDirectory;
@@ -15,8 +15,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.annotation.Target;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Formatter;
@@ -28,15 +28,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.ejb.ApplicationException;
 import javax.ejb.EJB;
-import javax.ejb.PostActivate;
 import javax.ejb.PrePassivate;
-import javax.ejb.Remove;
 import javax.ejb.Stateful;
-import javax.ejb.Timeout;
-import javax.persistence.Cacheable;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
+
 
 
 /**
@@ -48,12 +46,10 @@ import javax.swing.tree.TreeNode;
 @javax.ejb.StatefulTimeout(value=5L,unit= TimeUnit.MINUTES)
 public class FileSystemManagerBean implements FileSystemManager, Serializable {
     
-    
     @EJB
     private FileSystemResourceSingleton fs_resources;
     private ClaimFS claimFS;
-    
-    
+  
     @PostConstruct
     private void setClaimFSResources(){
         this.claimFS = new ClaimFS();
@@ -84,18 +80,20 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
        } catch (MongoException.DuplicateKey dup){   
            Logger log_write = Logger.getLogger(FileSystemManagerBean.class.getName());
            log_write.log(Level.SEVERE,"Trying to add Duplicate Register", dup);           
-           return false;
+           return false;           
        }
        
        return true;
     }
     
+    @Override
     public void deleteUserFSMetaData(String _userId) { 
         DBCollection fsmetadata_coll = fs_resources.getDBInstance().
                                                getCollection("fsmetadata");
         fsmetadata_coll.remove(new BasicDBObject("_id", _userId));    
       
     }
+    @Override
     public boolean setUserFSMetadataQuota(String _userId, float new_quota) { 
         DBCollection fsmetadata_coll = fs_resources.getDBInstance().
                                                getCollection("fsmetadata");
@@ -108,6 +106,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
      
     }
     
+    @Override
     public MetaDataStatistic getFSMetadataStatistics(String _userId){
         
         DBCollection fsmetadata_coll = fs_resources.getDBInstance().
@@ -136,6 +135,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     }
 
     
+    @Override
     public boolean createFSforClaim(String _userId, String _claim_id) {
     
         DBCollection fs_claim_coll = fs_resources.getDBInstance().
@@ -164,10 +164,13 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
         return true;  
     }
 
+    @Override
     public String getClaimFSId(){
          return this.claimFS.getClaim_id();
     }
     
+    
+    @Override
     public void loadClaimFS(String _claimid){
          DBCollection claimFS_coll = fs_resources.getDBInstance().
                                                getCollection("fs_claim_"+_claimid);
@@ -181,6 +184,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     //saves _claim fs to db with its changes
     // TODO: save ClaimFS state on destruction?
     
+    @Override
     public void saveClaimFStoDB(){
        
         //TODO? update fsmetadata and FSCLAIM parameters
@@ -203,9 +207,10 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
         }
         System.out.println("Saved");
         
-        // clear CLAIMFS reference?
+        //TODO: clear CLAIMFS reference?
     }
     
+    @Override
     public String UploadFileforClaim(FsClaimFile... file_objects) 
                                                         throws FileNotFoundException{
         GridFS myFS = new GridFS(fs_resources.getDBInstance());
@@ -234,7 +239,8 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
                    fsc.setFile_md5(gfsinput_file.getMD5());
                    fsc.setMongo_id(gfsinput_file.getId().toString());
                    this.claimFS.getNode_in().add(new DefaultMutableTreeNode(fsc,false));
-                   // delete tmp file
+                   // TODO: delete tmp file
+                   // TODO: chain updates for: Byte usage, num files, etc.
                 } catch (IOException ex) {
                     Logger.getLogger(FileSystemManagerBean.class.getName())
                                                   .log(Level.SEVERE, null, ex);
@@ -243,17 +249,20 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
                throw new FileNotFoundException(f_add.getAbsolutePath());
            }
         }
-       return null;
+       return null; // return what??
     }
+        
  /** Tree based operations ******/ 
     
     // updates node_in to root of fs_tree
+    @Override
     public void claimFSgoBackToRoot(){
         this.claimFS.setNode_in((DefaultMutableTreeNode)this.claimFS.getFs_tree().getRoot()); 
         this.claimFS.setPath_in(this.claimFS.getNode_in().getPath());
     }
     
     //deletes a whole directory with all children. Mantains actual dir
+    @Override
     public void claimFSdeleteDir(int index_change){
         DefaultMutableTreeNode node_to_erase = (DefaultMutableTreeNode)
                                             this.claimFS.getNode_in()
@@ -262,6 +271,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     }
     
     //rename directory based on index from node_in. mantains node in and path
+    @Override
     public void claimFSrenameDirectory(int index_change, String new_name) {
         
         DefaultMutableTreeNode node_to_change = (DefaultMutableTreeNode)
@@ -271,6 +281,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     }
     
     // updates node_in to previous directory set in path_in
+    @Override
     public void claimFSgoBackDir(){        
         
         TreeNode[] path_in = this.claimFS.getPath_in();
@@ -279,6 +290,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     }
     
     //Changes to directory based on child index of node_in attribute
+    @Override
     public void claimFSChangeDirectory(int index_change){
         DefaultMutableTreeNode _new_node_in;
         _new_node_in = (DefaultMutableTreeNode)
@@ -288,6 +300,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
     }
   
     // returns current working path, from root in string version
+    @Override
     public String claimFSgetWorkingPath(){
         
         StringBuilder readable_path = new StringBuilder();
@@ -300,16 +313,19 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
         return readable_path.toString();
     }
    
+    @Override
     public String claimFSgetRootContents(){
         return this.claimFS.getJsonNodeDisplay(this.claimFS.getFs_tree().getRoot());
     }
     
     // Json Display from node_in node
+    @Override
     public String claimFSgetActualDirContents() {
         return this.claimFS.getJsonNodeDisplay(this.claimFS.getNode_in());
     }
     
     // creates a new directory as a child of node_in and changes to newly created dir
+    @Override
     public void claimFScreateDir(String dir_name){
        FsClaimDirectory new_dir = new FsClaimDirectory(dir_name);
        DefaultMutableTreeNode new_node = new DefaultMutableTreeNode(new_dir,true); 
@@ -323,6 +339,7 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
  /***Claim definition query******/  
     
     // return claim byte occupation
+    @Override
     public String getClaimFSByteOccupation(){
         // return formated by locale
         Formatter formatter = new Formatter();
@@ -331,10 +348,12 @@ public class FileSystemManagerBean implements FileSystemManager, Serializable {
         return formatter.toString();
     }
     
+    @Override
     public String getClaimFSNumFiles(){
         return String.valueOf(this.claimFS.getNum_files());
     }
     
+    @Override
     public DefaultMutableTreeNode getClaimFSTree(){
         return this.claimFS.getFs_tree();
     }
