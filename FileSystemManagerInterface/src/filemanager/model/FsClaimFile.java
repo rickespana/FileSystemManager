@@ -21,6 +21,7 @@ public class FsClaimFile implements Serializable {
     private long file_length;
     private Date upload_date;
     private String file_md5;
+    private String file_extension;
 
     //helpers
     private String tmp_file_path;
@@ -68,7 +69,7 @@ public class FsClaimFile implements Serializable {
         this.mongo_id = mongo_id;
     }
 
-    public float getFile_length() {
+    public long getFile_length() {
         return file_length;
     }
 
@@ -90,6 +91,14 @@ public class FsClaimFile implements Serializable {
 
     public void setFile_md5(String file_md5) {
         this.file_md5 = file_md5;
+    }
+
+    public String getFile_extension() {
+        return file_extension;
+    }
+
+    public void setFile_extension(String file_extension) {
+        this.file_extension = file_extension;
     }
     
     @Override
